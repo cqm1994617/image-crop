@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      margin: 20px;
+    }
+
+    .btn {
+      display: block;
+      margin: 30px 0;
+    }
+  </style>
+  <title>图片等分裁剪</title>
+</head>
+
+<body>
+  <div class="container">
+    <input id="file" type="file" accept=".jpg, .jpeg, .png" />
+    <input id="row" placeholder="行数" />
+    <input id="column" placeholder="列数" />
+    <button id="btn" class="btn">转换</button>
+    <button id="download">下载</button>
+    <div id="list"></div>
+  </div>
+  <script>
+    var file = document.getElementById('file')
+    var btn = document.getElementById('btn')
+    var row = document.getElementById('row')
+    var column = document.getElementById('column')
+    var list = document.getElementById('list')
+    var download = document.getElementById('download')
+
+    download.onclick = function () {
+      var index = 0
+      var timer = null
+      var columnNumber = column.value - 0
+      var rowNumber = row.value - 0
+
+      if (list.childNodes.length < 1) {
+        return alert('请先进行转换')
+      }
+
+      function c() {
+        timer = setTimeout(() => {
+          downloadFile(list.childNodes[index].src, '图片' + index)
+          index++
+          if (index < columnNumber * rowNumber) {
+            c()
+          } else {
+            clearTimeout(timer)
+          }
+        }, 200)
+      }
+      c()
+    }
+
+    function downloadFile(content, fileName) {
+      var base64ToBlob = function (code) {
+        let parts = code.split(';base64,')
+        let contentType = parts[0].split(':')[1]
+        let raw = window.atob(parts[1])
+        let rawLength = raw.length;
+        let uInt8Array = new Uint8Array(rawLength);
+        for (let i = 0; i < rawLength; ++i) {
+          uInt8Array[i] = raw.charCodeAt(i)
+        }
+        return new Blob([uInt8Array], {
+          type: contentType
+        })
+      }
+      let aLink = document.createElement('a')
+      let blob = base64ToBlob(content)
+      let evt = document.createEvent("HTMLEvents");
+      evt.initEvent("click", true, true)
+      aLink.download = fileName
+      aLink.href = URL.createObjectURL(blob)
+      aLink.click()
+    }
+
+    function imageMake(width, height, img) {
+      var columnNumber = column.value
+      var rowNumber = row.value
+      var reg = /^[0-9]+.?[0-9]*$/
+
+      if (reg.test(columnNumber) && reg.test(rowNumber)) {
+        var unitSize = {
+          width: Math.floor(width / columnNumber) - 2,  //截过头的情况
+          height: Math.floor(height / rowNumber)
+        }
+
+        list.innerHTML = ''
+
+        for (var i = 0; i < rowNumber; i++) {
+          for (var j = 0; j < columnNumber; j++) {
+            var canvas = document.createElement('canvas')
+            var context = canvas.getContext('2d')
+            canvas.width = unitSize.width
+            canvas.height = unitSize.height
+            context.drawImage(img, j * unitSize.width, i * unitSize.height, unitSize.width, unitSize.height, 0, 0, unitSize.width, unitSize.height)
+
+            var cropImage = new Image()
+
+            cropImage.width = unitSize.width
+            cropImage.height = unitSize.height
+
+            cropImage.src = canvas.toDataURL('image/png')
+
+            list.append(cropImage)
+          }
+        }
+      } else {
+        alert('请先输入行数和列数，只能是数字')
+      }
+    }
+
+    function imageLoad() {
+      imageMake(this.width, this.height, this)
+    }
+
+    function fileReaderLoad(e) {
+      var img = new Image()
+      img.src = e.target.result
+      img.onload = imageLoad
+    }
+
+    btn.onclick = function () {
+      var reader = new FileReader()
+      if (file.files.length < 1) {
+        return alert('请先上传图片')
+      }
+      reader.readAsDataURL(file.files[0])
+      reader.onload = fileReaderLoad
+    }
+  </script>
+</body>
+
+</html>
